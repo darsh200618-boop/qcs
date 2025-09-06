@@ -2,4 +2,9 @@ streamlit
 numpy
 matplotlib
 qiskit
-
+plotly
+seaborn
+cryptography
+pycryptodome
+pillow
+pandas
