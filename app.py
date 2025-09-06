@@ -162,7 +162,7 @@ left, right = st.columns([1, 1])
 
 with left:
     st.subheader("Alice (Sender)")
-    st.image(image_pil, caption="Alice's original image", use_column_width=True)
+    st.image(image_pil, caption="Alice's original image", use_container_width=True)
     st.write(f"Image size: {image_pil.size[0]} x {image_pil.size[1]} — mode: {image_pil.mode}")
 
 with right:
@@ -228,7 +228,7 @@ if st.session_state["run_now"] or auto_encrypt:
     col_a, col_b = st.columns([1, 1])
     with col_a:
         st.write("Original (Alice → to send)")
-        st.image(image_pil, caption="Original image (to be sent)", use_column_width=True)
+        st.image(image_pil, caption="Original image (to be sent)", use_container_width=True)
 
     with col_b:
         st.write("Encrypted (binary) — not displayable as image")
@@ -281,4 +281,5 @@ if st.session_state["run_now"] or auto_encrypt:
 # Footer / About
 st.markdown("---")
 st.caption("This demo is educational. The derived key is shown for demo purposes only; in real QKD, key material is handled carefully and not revealed.")
+
 
