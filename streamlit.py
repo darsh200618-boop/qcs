@@ -87,7 +87,7 @@ with tabs[0]:
             st.code("".join(map(str, alice_sift[:50])), language="text")
 
     with col2:
-        st.image("C:/Users/HP/Downloads/image/windows.png", caption="Original Image", use_column_width=True)
+        st.image("windows.png", caption="Original Image", use_column_width=True)
         st.info("This image could be encrypted using the secret key derived from BB84.")
 
 
@@ -135,3 +135,4 @@ with tabs[2]:
     """)
 
     st.info("Developed as an advanced demo for Quantum Key Distribution 🔐✨")
+
