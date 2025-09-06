@@ -216,12 +216,12 @@ with tabs[1]:
             # if image, display thumbnail
             try:
                 img = Image.open(io.BytesIO(uploaded_bytes)).convert("RGB")
-                st.image(img, caption="Uploaded (Alice's file)", use_column_width=False, width=300)
+                st.image(img, caption="Uploaded (Alice's file)", use_container_width=False, width=300)
             except Exception:
                 st.info("Uploaded file is not an image — will be encrypted as binary.")
         elif use_default_image and default_img is not None:
             img = default_img
-            st.image(img, caption="Default sample image (Alice)", use_column_width=False, width=300)
+            st.image(img, caption="Default sample image (Alice)", use_container_width=False, width=300)
             uploaded_bytes = pil_to_bytes(img, fmt="PNG")
         else:
             uploaded_bytes = None
@@ -411,4 +411,5 @@ with tabs[4]:
 # -------------------------
 st.markdown("---")
 st.caption("Prepared as a professional demo. Keep key material secret in real applications.")
+
 
