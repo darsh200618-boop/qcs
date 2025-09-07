@@ -220,7 +220,7 @@ else:
 col1, col2 = st.columns([1,1])
 with col1:
     st.subheader('Original Image')
-    st.image(img, use_column_width=True)
+    st.image(img, use_container_width=True)
 
 # Process image to bits
 bits, shape = image_to_bits(img)
@@ -328,3 +328,4 @@ else:
 # Footer
 st.markdown('---')
 st.caption('This demo is a simulation — it uses a simplified intercept-resend Eve model and does not implement full error-correction or privacy-amplification protocols. Use for educational/demonstration purposes only.')
+
