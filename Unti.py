@@ -3,6 +3,7 @@
 # ---------------------------
 with tabs[0]:
     st.header("Simulation — Alice sends file, BB84 runs, Bob encrypts (if secure)")
+    tabs = st.tabs(["Simulation", "Graphs & Analysis"])
 
     # Load image or file bytes
     if uploaded_file is not None:
@@ -151,3 +152,4 @@ with tabs[0]:
                 "decrypted_blob": decrypted_blob,
                 "file_name": file_name,
             }
+
