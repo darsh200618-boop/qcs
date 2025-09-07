@@ -220,7 +220,7 @@ with tabs[0]:
     with col_left:
         st.subheader("Alice (Sender)")
         if preview_img is not None:
-            st.image(preview_img, caption=f"Alice's file: {file_name}", use_column_width=True)
+            st.image(preview_img, caption=f"Alice's file: {file_name}", use_container_width=True)
             st.write(f"File size: {len(file_bytes)} bytes")
         else:
             st.warning("No file is provided. Upload a file or add `images/windows.png` to the repo.")
@@ -312,7 +312,7 @@ with tabs[0]:
                 with col_o:
                     st.write("**Original (Alice)**")
                     if preview_img:
-                        st.image(preview_img, use_column_width=True)
+                        st.image(preview_img, use_container_width=True)
                     else:
                         st.write(f"File: {file_name} ({len(file_bytes)} bytes)")
                     if not aborted:
@@ -321,7 +321,7 @@ with tabs[0]:
                 with col_e:
                     st.write("**Eve's View (reconstructed / corrupted)**")
                     if eve_img_preview is not None:
-                        st.image(eve_img_preview, use_column_width=True, caption="Eve's reconstructed image (visualized corruption)")
+                        st.image(eve_img_preview, use_container_width=True, caption="Eve's reconstructed image (visualized corruption)")
                     else:
                         st.write(f"Eve's reconstructed bytes preview: {len(eve_recon_bytes)} bytes")
                     st.download_button("Download Eve's blob (.bin)", data=eve_recon_bytes, file_name="eve_reconstruction.bin")
@@ -331,7 +331,7 @@ with tabs[0]:
                     if not aborted and decrypted_blob is not None:
                         try:
                             bob_img = Image.open(io.BytesIO(decrypted_blob)).convert("RGB")
-                            st.image(bob_img, use_column_width=True, caption="Bob's recovered image (after decrypt)")
+                            st.image(bob_img, use_container_width=True, caption="Bob's recovered image (after decrypt)")
                         except Exception:
                             st.write(f"Recovered file bytes: {len(decrypted_blob)}")
                         st.download_button("Download Encrypted Blob (.bin)", data=encrypted_blob, file_name="encrypted_blob.bin")
@@ -425,3 +425,4 @@ with tabs[1]:
 # Footer
 st.markdown("---")
 st.caption("Educational demo. The app reveals keys and artifacts for demonstration; in real QKD, keys and raw data are handled confidentially.")
+
