@@ -1,85 +1,153 @@
-import streamlit as st
-import numpy as np
-import matplotlib.pyplot as plt
+# ---------------------------
+# Tab 1: Simulation
+# ---------------------------
+with tabs[0]:
+    st.header("Simulation — Alice sends file, BB84 runs, Bob encrypts (if secure)")
 
-# =====================
-# BB84 Simulator
-# =====================
-def simulate_bb84(num_bits: int = 1000, p_noise: float = 0.05, p_eve: float = 0.0, seed: int | None = None):
-    rng = np.random.default_rng(seed)
-
-    alice_bits = rng.integers(0, 2, size=num_bits, dtype=np.int8)
-    alice_bases = rng.integers(0, 2, size=num_bits, dtype=np.int8)
-    bob_bases = rng.integers(0, 2, size=num_bits, dtype=np.int8)
-    bob_results = np.empty(num_bits, dtype=np.int8)
-
-    for i in range(num_bits):
-        if rng.random() < p_eve:
-            eve_basis = rng.integers(0, 2)
-            eve_bit = alice_bits[i] if eve_basis == alice_bases[i] else rng.integers(0, 2)
-            sender_basis = eve_basis
-            sender_bit = eve_bit
-        else:
-            sender_basis = alice_bases[i]
-            sender_bit = alice_bits[i]
-
-        if bob_bases[i] == sender_basis:
-            bob_bit = sender_bit
-        else:
-            bob_bit = rng.integers(0, 2)
-
-        if rng.random() < p_noise:
-            bob_bit ^= 1
-
-        bob_results[i] = bob_bit
-
-    sift_mask = (alice_bases == bob_bases)
-    alice_sift = alice_bits[sift_mask]
-    bob_sift = bob_results[sift_mask]
-
-    sift_len = int(sift_mask.sum())
-    if sift_len == 0:
-        qber = np.nan
-        accuracy = np.nan
+    # Load image or file bytes
+    if uploaded_file is not None:
+        file_bytes = uploaded_file.getvalue()
+        file_name = uploaded_file.name
+        # attempt to show thumbnail if image
+        try:
+            preview_img = Image.open(io.BytesIO(file_bytes)).convert("RGB")
+            st.sidebar.success(f"Loaded upload: {file_name} ({len(file_bytes)} bytes)")
+        except Exception:
+            preview_img = None
+            st.sidebar.success(f"Loaded upload (non-image): {file_name} ({len(file_bytes)} bytes)")
     else:
-        errors = np.count_nonzero(alice_sift != bob_sift)
-        qber = errors / sift_len
-        accuracy = 1.0 - qber
+        default_img = load_default_image()
+        if default_img is not None:
+            preview_img = default_img
+            file_bytes = pil_to_bytes(default_img, fmt="PNG")
+            file_name = "windows.png"
+            st.sidebar.info("Using default sample image `images/windows.png`")
+        else:
+            preview_img = None
+            file_bytes = None
+            file_name = None
 
-    return qber, accuracy, sift_len
+    st.subheader("Alice (Sender)")
+    if preview_img is not None:
+        st.image(preview_img, caption=f"Alice's file: {file_name}", use_container_width=True)
+        st.write(f"File size: {len(file_bytes)} bytes")
+    else:
+        st.warning("No file is provided. Upload a file or add `images/windows.png` to the repo.")
 
+    st.subheader("BB84 Controls & Run")
+    st.write("Adjust parameters in the sidebar, then click **Run BB84**.")
+    run_btn = st.button("▶ Run BB84 & Attempt Encrypt")
 
-# =====================
-# Streamlit UI
-# =====================
-st.title("🔐 Quantum Key Distribution Simulator (BB84)")
-st.write("Demo of BB84 protocol with noise and eavesdropping.")
+    if run_btn:
+        if file_bytes is None:
+            st.error("No file available to send. Upload or add default image.")
+        else:
+            # Run simulation
+            with st.spinner("Running BB84 simulation..."):
+                res = simulate_bb84(num_bits=num_bits, p_noise=p_noise, p_eve=p_eve, seed=int(seed))
 
-# Sidebar controls
-num_bits = st.sidebar.slider("Number of bits", 100, 5000, 1000, 100)
-p_noise = st.sidebar.slider("Noise level", 0.0, 0.5, 0.05, 0.01)
-p_eve = st.sidebar.slider("Eavesdrop probability", 0.0, 1.0, 0.1, 0.05)
-seed = st.sidebar.number_input("Random Seed", value=42, step=1)
+            qber = res["qber"]
+            sift_len = res["sift_len"]
+            st.success("BB84 simulation completed")
 
-# Run simulation
-qber, accuracy, sift_len = simulate_bb84(num_bits, p_noise, p_eve, seed)
+            # Metrics (left aligned)
+            st.subheader("Results")
+            mcol1, mcol2, mcol3 = st.columns(3)
+            mcol1.metric("Sifted key length", sift_len)
+            mcol2.metric("QBER (%)", f"{qber*100:.3f}" if not np.isnan(qber) else "N/A")
+            mcol3.metric("Agreement (%)", f"{(1-qber)*100:.3f}" if not np.isnan(qber) else "N/A")
 
-# Show results
-st.metric("Sifted Key Length", sift_len)
-st.metric("QBER (%)", f"{qber*100:.2f}")
-st.metric("Accuracy (%)", f"{accuracy*100:.2f}")
+            # Show small table of sifted bits
+            if sift_len > 0:
+                preview_n = min(60, sift_len)
+                df_preview = pd.DataFrame({
+                    "index": np.arange(preview_n),
+                    "Alice": res["alice_sift"][:preview_n].astype(int),
+                    "Bob": res["bob_sift"][:preview_n].astype(int)
+                })
+                st.subheader("Sample of sifted key (Alice vs Bob)")
+                st.dataframe(df_preview, use_container_width=True)
+            else:
+                st.info("Sifted key length is zero. Increase number of qubits.")
 
-# Plot Accuracy vs Noise
-noise_range = np.linspace(0, 0.5, 11)
-accuracies = []
-for noise in noise_range:
-    _, acc, _ = simulate_bb84(num_bits, noise, p_eve, seed)
-    accuracies.append(acc * 100)
+            # QBER threshold check
+            QBER_THRESHOLD = 0.11
+            if np.isnan(qber):
+                st.error("QBER undefined (no sifted bits). Aborting.")
+                aborted = True
+            elif qber > QBER_THRESHOLD:
+                st.error(f"QBER = {qber*100:.3f}% > 11%: ABORTING transfer for security.")
+                aborted = True
+            else:
+                st.success(f"QBER = {qber*100:.3f}% ≤ 11% → Proceeding to derive key & encrypt.")
+                aborted = False
 
-fig, ax = plt.subplots()
-ax.plot(noise_range, accuracies, marker="o", label=f"Eavesdrop p={p_eve}")
-ax.set_xlabel("Noise Level")
-ax.set_ylabel("Key Accuracy (%)")
-ax.set_title("BB84 Accuracy vs Noise")
-ax.legend()
-st.pyplot(fig)
+            # Derive keys
+            alice_key = derive_key_from_bits(res["alice_sift"])
+            bob_key = derive_key_from_bits(res["bob_sift"])
+
+            st.subheader("Derived Key (demo only)")
+            st.code(f"Alice key (SHA-256 of sifted bits): {alice_key.hex()}", language="text")
+
+            # Eve’s corrupted view (static pixelation for images)
+            eve_img_preview = None
+            if preview_img is not None:
+                eve_img_preview = preview_img.copy()
+                # Apply random pixelation
+                small = eve_img_preview.resize((eve_img_preview.width // 12, eve_img_preview.height // 12))
+                eve_img_preview = small.resize(preview_img.size, Image.NEAREST)
+
+            # Encrypt if not aborted
+            encrypted_blob = None
+            decrypted_blob = None
+            if not aborted:
+                with st.spinner("Encrypting file with derived key (AES-GCM)..."):
+                    encrypted_blob = aes_gcm_encrypt(bob_key, file_bytes)
+                    try:
+                        decrypted_blob = aes_gcm_decrypt(bob_key, encrypted_blob)
+                        verified = decrypted_blob == file_bytes
+                    except Exception:
+                        verified = False
+                if verified:
+                    st.success("Encryption + decryption verification OK — Bob can recover the file.")
+                else:
+                    st.error("Verification FAILED — decryption mismatch.")
+
+            # Display results (all left aligned)
+            st.markdown("---")
+            st.subheader("Transmission Results")
+
+            st.write("**Original (Alice)**")
+            if preview_img:
+                st.image(preview_img, use_column_width=True)
+            if not aborted:
+                st.download_button("Download Original", data=file_bytes, file_name=f"alice_{file_name}")
+
+            st.write("**Eve's View (Corrupted)**")
+            if eve_img_preview is not None:
+                st.image(eve_img_preview, use_column_width=True, caption="Eve's pixelated corruption")
+            else:
+                st.write("Corrupted data (non-image file).")
+
+            st.write("**Bob (Receiver)**")
+            if not aborted and decrypted_blob is not None:
+                try:
+                    bob_img = Image.open(io.BytesIO(decrypted_blob)).convert("RGB")
+                    st.image(bob_img, use_column_width=True, caption="Bob's recovered image")
+                except Exception:
+                    st.write(f"Recovered file bytes: {len(decrypted_blob)}")
+                st.download_button("Download Encrypted Blob", data=encrypted_blob, file_name="encrypted_blob.bin")
+                st.download_button("Download Decrypted (Bob)", data=decrypted_blob, file_name=f"bob_{file_name}")
+            else:
+                st.info("Bob did not receive a decryptable file.")
+
+            # Save last run artifacts
+            st.session_state["last_run"] = {
+                "params": {"num_bits": num_bits, "p_noise": p_noise, "p_eve": p_eve, "seed": seed},
+                "res": res,
+                "alice_key": alice_key,
+                "bob_key": bob_key,
+                "encrypted_blob": encrypted_blob,
+                "decrypted_blob": decrypted_blob,
+                "file_name": file_name,
+            }
